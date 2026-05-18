@@ -1,0 +1,15 @@
+# Local environment
+.venv/
+__pycache__/
+*.pyc
+.python-version
+.DS_Store
+
+# marimo cache / generated layouts
+__marimo__/
+
+# tooling
+.ruff_cache/
+
+# local Claude Code settings
+.claude/settings.local.json
