@@ -271,6 +271,7 @@ def _():
     from feature_viz.plotting import (
         show_activation_overlay,
         show_activation_ranking,
+        show_channel_map,
         show_feature_directions,
         show_image_grid,
     )
@@ -286,6 +287,7 @@ def _():
         load_bundled_images,
         show_activation_overlay,
         show_activation_ranking,
+        show_channel_map,
         show_feature_directions,
         show_image_grid,
         top_examples,
@@ -477,9 +479,10 @@ def _(mo):
     mo.md(r"""
     ## Step 4 — inspect one neuron
 
-    Type the channel index you want to study. The panel below shows it two
-    ways — its **response** to *your* image (left) and its **feature**
-    (right): the same neuron's peak crops across the bundled dataset.
+    Type the channel index you want to study. The panel below shows it three
+    ways at once — its **activation map** (the raw `H × W` numbers, left), its
+    **response** to *your* image (middle), and its **feature** (right): the
+    same neuron's peak crops across the bundled dataset.
     """)
     return
 
@@ -506,6 +509,7 @@ def _(
     mo,
     pil_image,
     show_activation_overlay,
+    show_channel_map,
     show_image_grid,
     top_examples,
 ):
@@ -515,11 +519,15 @@ def _(
     _display = fv.preprocess_display(pil_image)
     _examples = top_examples(da, _c, top_k=8, crop_size=96)
     _crops = [(f"{e.name}\n{e.score:.1f}", e.crop) for e in _examples]
+    _h, _w = _map.shape
     mo.vstack(
         [
-            mo.md(f"### Neuron `{layer.value}:{_c}` — response vs. feature"),
+            mo.md(
+                f"### Neuron `{layer.value}:{_c}` — activation map, response, feature"
+            ),
             mo.hstack(
                 [
+                    show_channel_map(_map, title=f"ACT MAP — the raw {_h}×{_w} grid"),
                     show_activation_overlay(
                         _display, _map, title="RESPONSE — where it fires on YOUR image"
                     ),
@@ -529,18 +537,26 @@ def _(
                 gap=2,
             ),
             mo.md(
-                f"**Left — the response.** Your input image with neuron `{_c}`'s "
-                f"activation glowing on top (bright = strong firing); the **cyan "
-                f"box** marks its peak — the receptive-field patch it reacts to "
-                f"most. Peak `{_stats.max:+.2f}` at `(y={_stats.argmax_yx[0]}, "
-                f"x={_stats.argmax_yx[1]})`, mean `{_stats.mean:+.2f}`. Change the "
-                f"image and the glow moves.\n\n"
+                f"**Left — the activation map.** The raw `{_h}×{_w}` grid of "
+                f"numbers neuron `{_c}` outputs for your image — its **response** "
+                f"as a tensor, with no image underneath. Bright cells = strong "
+                f"firing, dark = silent. This is literally `act[:, {_c}, :, :]` "
+                f"from Step 2; the colour bar gives the scale. Peak "
+                f"`{_stats.max:+.2f}` at grid cell "
+                f"`(y={_stats.argmax_yx[0]}, x={_stats.argmax_yx[1]})`, mean "
+                f"`{_stats.mean:+.2f}`.\n\n"
+                f"**Middle — the response.** The *same* activation map, upscaled "
+                f"and blended onto your input so you can see **where** on the "
+                f"image it fired; the **cyan box** marks the receptive-field "
+                f"patch at the peak. Left and middle carry identical numbers — "
+                f"the middle just puts them back on the pixels they came from. "
+                f"Change the image and both move together.\n\n"
                 f"**Right — the feature.** The same kind of patch — the "
                 f"receptive-field crop at the firing peak — but for the bundled "
-                f"dataset images that drive this neuron hardest. That is *what it "
-                f"detects*, independent of your image. The cyan box on the left "
-                f"and these crops are the same thing, on different images: a "
-                f"clean detector shows one repeated motif."
+                f"dataset images that drive this neuron hardest. That is *what "
+                f"it detects*, independent of your image. The cyan box in the "
+                f"middle and these crops are the same thing, on different "
+                f"images: a clean detector shows one repeated motif."
             ),
         ]
     )

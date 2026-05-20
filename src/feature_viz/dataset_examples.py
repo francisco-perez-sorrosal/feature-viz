@@ -10,7 +10,7 @@ a dataset, crop the small patch around the spot where the neuron fires hardest.
 A curve detector then yields curve-shaped patches; a fur detector, fur.
 
 This module computes those crops. It works over the bundled `sample_images/`
-set (~96 images) — tiny next to the millions the papers search, so it
+set (~196 images) — tiny next to the millions the papers search, so it
 demonstrates the *method*, not the paper's polish.
 
 Two products:

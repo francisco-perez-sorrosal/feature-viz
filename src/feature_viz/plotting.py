@@ -27,6 +27,7 @@ __all__ = [
     "show_ascent_curve",
     "show_activation_ranking",
     "show_feature_directions",
+    "show_circuit_rows",
 ]
 
 
@@ -227,6 +228,85 @@ def show_feature_directions() -> Figure:
     ax.set_yticks([])
     for spine in ax.spines.values():
         spine.set_visible(False)
+    fig.tight_layout()
+    return fig
+
+
+def show_circuit_rows(
+    inputs: list[tuple[int, float, torch.Tensor, list[np.ndarray]]],
+    *,
+    n_crops: int = 4,
+    synth_thumbnails: list[np.ndarray | None] | None = None,
+) -> Figure:
+    """One row per upstream input — weight matrix on the left, feature crops on the right.
+
+    Each tuple is ``(channel_index, signed_sum, k_by_k_weight, list_of_crops)``.
+    The weight is rendered with the symmetric red/blue colormap used elsewhere
+    (red excites the downstream neuron, blue inhibits); the crops alongside it
+    are the upstream neuron's peak dataset examples — its *feature*. Reading
+    the two together turns a column of weights into a *circuit*.
+
+    When ``synth_thumbnails`` is provided (one image per row, or ``None`` for
+    "not yet rendered"), an extra column is inserted between the weight matrix
+    and the dataset crops showing the upstream neuron's synthesised
+    feature-visualisation thumbnail — a second, model-internal representation
+    of the same feature, complementing the real-world crops.
+    """
+    n_rows = len(inputs)
+    if n_rows == 0:
+        fig, ax = plt.subplots(figsize=(2, 1))
+        ax.axis("off")
+        return fig
+    has_synth = synth_thumbnails is not None
+    n_cols = 1 + (1 if has_synth else 0) + n_crops
+    width_ratios = [1.4] + ([1.1] if has_synth else []) + [1.0] * n_crops
+    fig, axes = plt.subplots(
+        n_rows,
+        n_cols,
+        figsize=(1.4 * n_cols + 0.6, 1.5 * n_rows),
+        squeeze=False,
+        gridspec_kw={"width_ratios": width_ratios},
+    )
+    for r, (ch, score, w, crops) in enumerate(inputs):
+        ax_w = axes[r, 0]
+        w_np = (
+            w.detach().cpu().numpy() if isinstance(w, torch.Tensor) else np.asarray(w)
+        )
+        vmax = max(abs(float(w_np.min())), abs(float(w_np.max())), 1e-9)
+        ax_w.imshow(w_np, cmap="RdBu_r", vmin=-vmax, vmax=vmax)
+        for (yy, xx), value in np.ndenumerate(w_np):
+            ax_w.text(xx, yy, f"{value:+.1f}", ha="center", va="center", fontsize=7)
+        ax_w.set_title(f"ch {ch}   sum={score:+.2f}", fontsize=8)
+        ax_w.set_xticks([])
+        ax_w.set_yticks([])
+        col_offset = 1
+        if has_synth:
+            ax_s = axes[r, 1]
+            thumb = synth_thumbnails[r]
+            if thumb is not None:
+                ax_s.imshow(thumb)
+            else:
+                ax_s.text(
+                    0.5,
+                    0.5,
+                    "(click to\nrender)",
+                    ha="center",
+                    va="center",
+                    fontsize=7,
+                    color="gray",
+                    transform=ax_s.transAxes,
+                )
+            if r == 0:
+                ax_s.set_title("synth", fontsize=8)
+            ax_s.set_xticks([])
+            ax_s.set_yticks([])
+            col_offset = 2
+        for c in range(n_crops):
+            ax = axes[r, col_offset + c]
+            if c < len(crops):
+                ax.imshow(crops[c])
+            ax.set_xticks([])
+            ax.set_yticks([])
     fig.tight_layout()
     return fig
 

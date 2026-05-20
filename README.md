@@ -9,7 +9,9 @@ I hit when reading those articles:
 3. How is the small synthesised RGB thumbnail representing each neuron actually produced? — [*Early Vision*](https://distill.pub/2020/circuits/early-vision/)
 
 Each question gets a [marimo](https://marimo.io) notebook that explores it
-interactively, backed by a small reusable library (`feature_viz`).
+interactively, backed by a small reusable library (`feature_viz`). A fourth
+notebook composes notebooks 01 and 02 into a **circuit** view — Claim 2 of
+*Zoom In* made concrete.
 
 > [!NOTE]
 > Model: `torchvision.models.googlenet` with `IMAGENET1K_V1` weights — a
@@ -35,13 +37,14 @@ uv run marimo edit notebooks/01_neurons_and_features.py    # interactive editor
 uv run marimo run  notebooks/03_feature_visualization.py   # read-only app view
 ```
 
-The three notebooks:
+The four notebooks:
 
 | Notebook | Question | What it shows |
 | -------- | -------- | ------------- |
-| `01_neurons_and_features.py` | What *is* a neuron, and what does it detect? | Browse channels with the **scout**, then inspect one neuron two ways: its **response** (activation map on image) beside its **feature** (receptive-field crops of the dataset images it fires on), bridged by an activation ranking. |
+| `01_neurons_and_features.py` | What *is* a neuron, and what does it detect? | Browse channels with the **scout**, then inspect one neuron three ways at once: its **activation map** (raw `H×W` numbers), its **response** (the same map on your image), and its **feature** (receptive-field crops of the dataset images it fires on), bridged by an activation ranking. |
 | `02_weights_between_neurons.py` | What connects two neurons? | The effective `k×k` kernel `W_eff[j,i]` — BatchNorm folded in, bottleneck multiplied out. Red excites, blue inhibits. |
 | `03_feature_visualization.py` | How is the DxD thumbnail made? | Activation-maximisation gradient ascent that synthesises the input image driving a channel hardest, with a step-by-step evolution filmstrip from noise to feature. |
+| `04_circuits.py` | What is a *circuit*? | The composition of 01 + 02: pick a downstream neuron, then the top excitatory and inhibitory upstream channels are ranked and shown as `[weight matrix] + [upstream feature crops]` next to the downstream feature — *these features, weighted this way, build that one.* |
 
 marimo notebooks are plain `.py` files — they diff cleanly in git and are edited
 like any source file. Cells are reactive: change a control and dependents
@@ -72,7 +75,7 @@ result = fv.render_neuron(model, "inception4b", channel=100, steps=512, n_snapsh
 | `feature_vis` | `FourierImage`, transformation robustness, the render loop (notebook 03). |
 | `plotting` | matplotlib helpers the notebooks render. |
 
-`src/feature_viz/sample_images/` holds ~96 bundled ImageNet sample images for
+`src/feature_viz/sample_images/` holds ~196 bundled ImageNet sample images for
 the notebook-01 dataset-example view; `scripts/fetch_sample_images.py`
 regenerates them (see that directory's `README.md` for provenance and licensing).
 
